@@ -7,6 +7,8 @@ use url::Url;
 use url::ParseError as UrlParseError;
 use failure::{Backtrace, Context, Fail};
 use std::net::ToSocketAddrs;
+use actix_web::client::{Client, ClientRequest};
+use actix_web::{dev, http::Uri, web}
 use crate::req::ReqErrorKind::NotFoundSockAddr;
 
 #[derive(Debug, Fail)]
@@ -96,4 +98,17 @@ fn test_create_base_url() {
     let actual = actual.unwrap();
 
     assert_eq!(actual.as_str(), "http://127.0.0.1:8000/");
+}
+
+pub fn create_forwarded_req(
+    client: &web::Data<Client>,
+    head: &dev::RequestHead,
+    new_url: &str
+) -> ClientRequest {
+    let forwarded_req = client.request_from(new_url, head).no_decompress();
+    if let Some(addr) = head.peer_addr {
+        forwarded_req.header("x-forwarded-for", format!("{}", addr.ip()))
+    } else {
+        forwarded_req
+    }
 }
