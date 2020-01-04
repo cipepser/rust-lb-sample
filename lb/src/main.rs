@@ -1,9 +1,15 @@
 #[macro_use]
 extern crate lazy_static;
 
+use actix_web::client::Client;
+use actix_web::{
+    middleware, web, App, HttpServer,
+};
+
 use std::sync::atomic::AtomicUsize;
 use std::sync::Mutex;
 use url::Url;
+use failure::_core::panicking::panic_fmt;
 
 mod req;
 
@@ -42,6 +48,29 @@ impl Server {
     }
 }
 
-fn main() {
-    print!("hello");
+// TODO: unimplemented
+//pub async fn forward() -> {}
+
+// TODO: unimplemented
+//pub async fn active_check() -> {}
+
+// TODO: unimplemented
+pub fn passive_check() {
+    panic!("unimplemented");
+}
+
+#[actix_rt::main]
+pub async fn main() -> std::io::Result<()> {
+    passive_check();
+    print!("run proxy");
+    HttpServer::new(move || {
+        App::new()
+            .data(Client::new())
+            .wrap(middleware::Logger::default())
+            .default_service(web::route().to(forward))
+    })
+        .bind(("127.0.0.1", 3000))?
+        .system_exit()
+        .start()
+        .await
 }
