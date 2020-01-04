@@ -12,6 +12,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::Mutex;
 use url::Url;
 use failure::_core::panicking::panic_fmt;
+use failure::_core::cmp::Ordering;
 
 mod req;
 
@@ -51,8 +52,21 @@ impl Server {
 }
 
 fn get_new_url() -> String {
-    // TODO: unimplemented
-    panic!("unimplemented")
+    let mut current_index = CURRENT_INDEX.fetch_add(1, Ordering::SeqCst);
+    if current_index > 100 {
+        CURRENT_INDEX.store(0, Ordering::SeqCst);
+    }
+
+    let servers = SERVERS.lock().unwrap();
+    let length = servers.len();
+
+    while !servers[current_index % length].is_alive {
+        current_index = CURRENT_INDEX.fetch_add(1, Ordering::SeqCst);
+        if servers.iter().all(|server| !server.is_alive) {
+            panic!("all server are down!");
+        }
+    }
+    servers[current_index % length].url.to_string()
 }
 
 pub async fn forward(
