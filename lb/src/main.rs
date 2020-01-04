@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate lazy_static;
 
-use actix_web::client::Client;
+use actix_web::client::{Client, ClientResponse, SendRequestError};
 use actix_web::{
+    dev::{Decompress, Payload, PayloadStream, RequestHead},
     middleware, web, App, HttpServer,
+    HttpRequest, HttpResponse, Error,
 };
 
 use std::sync::atomic::AtomicUsize;
@@ -48,14 +50,50 @@ impl Server {
     }
 }
 
-// TODO: unimplemented
-//pub async fn forward() -> {}
+fn get_new_url() -> String {
+    // TODO: unimplemented
+    panic!("unimplemented")
+}
 
-// TODO: unimplemented
-//pub async fn active_check() -> {}
+pub async fn forward(
+    req: HttpRequest,
+    body: web::Bytes,
+    client: web::Data<Client>,
+) -> Result<HttpResponse, Error> {
+    let head = req.head();
+    let mut res;
+    loop {
+        if let Ok(raw_res) = active_check(
+            &client, head, &body, get_new_url().as_str(),
+        ).await {
+            res = raw_res;
+            break;
+        }
+    }
 
-// TODO: unimplemented
+    let mut client_resp = HttpResponse::build(res.status());
+
+    for (header_name, header_value)
+        in res.headers()
+        .iter()
+        .filter(|(h, _)| *h != "connection") {
+        client_resp.header(header_name.clone(), header_value.clone())
+    }
+    Ok(client_resp.body(res.body().await?))
+}
+
+pub async fn active_check(
+    client: &web::Data<Client>,
+    head: &RequestHead,
+    body: &web::Bytes,
+    new_url: &str,
+) -> Result<ClientResponse<Decompress<Payload<PayloadStream>>>, SendRequestError> {
+    // TODO: unimplemented
+    panic!("unimplemented");
+}
+
 pub fn passive_check() {
+    // TODO: unimplemented
     panic!("unimplemented");
 }
 
