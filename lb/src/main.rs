@@ -102,12 +102,26 @@ pub async fn active_check(
     body: &web::Bytes,
     new_url: &str,
 ) -> Result<ClientResponse<Decompress<Payload<PayloadStream>>>, SendRequestError> {
-    // TODO: unimplemented
-    panic!("unimplemented");
+    let retry_count: usize = 3;
+    let mut index = 0;
+    loop {
+        let forwarded_req = req::create_forwarded_req(&client, head, new_url);
+        let res_result = forwarded_req.send_body(body.clone()).await;
+        match res_result {
+            Ok(raw_res) => return Ok(raw_res),
+            Err(err) => {
+                println!("{}", &err);
+                if index >= retry_count {
+                    return Err(err);
+                }
+            }
+        }
+        index += 1;
+    }
 }
 
 pub fn passive_check() {
-    // TODO: unimplemented
+    // TODO: continue to implement from here
     panic!("unimplemented");
 }
 
