@@ -10,9 +10,14 @@ use actix_web::{
 
 use std::sync::atomic::AtomicUsize;
 use std::sync::Mutex;
+use std::thread;
 use url::Url;
 use failure::_core::panicking::panic_fmt;
 use failure::_core::cmp::Ordering;
+use std::thread::sleep;
+use failure::_core::time::Duration;
+use futures::StreamExt;
+use std::net::TcpStream;
 
 mod req;
 
@@ -121,8 +126,48 @@ pub async fn active_check(
 }
 
 pub fn passive_check() {
-    // TODO: continue to implement from here
-    panic!("unimplemented");
+    let mut host_and_ports: Vec<_> = {
+        let servers = SERVERS.lock().unwrap();
+        servers
+            .iter()
+            .map(|server| {
+                format!(
+                    "{}:{}",
+                    server.url.host_str().unwrap(),
+                    server.url.port().unwrap(),
+                )
+            })
+            .collect()
+    };
+
+    let _ = thread::spawn(move || loop {
+        sleep(Duration::new(5, 0));
+
+        let mut remove_targets = vec![];
+        for (index, host_and_port) in host_and_ports.iter().enumerate() {
+            match TcpStream::connect(host_and_port) {
+                Ok(_) => {
+                    println!("{} is running!", host_and_port);
+                }
+                Err(err) => {
+                    println!("{}", err);
+                    println!("{} is down!", host_and_port);
+                    remove_targets.push(index);
+                    let mut servers = SERVERS.lock().unwrap();
+                    servers[index].is_alive = false;
+                }
+            }
+        }
+
+        remove_targets.reverse();
+        for index in remove_targets {
+            host_and_ports.remove(index);
+        }
+
+        if host_and_ports.len() == 0 {
+            panic!("all server are down!");
+        }
+    });
 }
 
 #[actix_rt::main]
