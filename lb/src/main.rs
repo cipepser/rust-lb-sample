@@ -4,20 +4,17 @@ extern crate lazy_static;
 use actix_web::client::{Client, ClientResponse, SendRequestError};
 use actix_web::{
     dev::{Decompress, Payload, PayloadStream, RequestHead},
-    middleware, web, App, HttpServer,
-    HttpRequest, HttpResponse, Error,
+    middleware, web, App, Error,
+    HttpServer, HttpRequest, HttpResponse,
 };
 
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use url::Url;
-use failure::_core::panicking::panic_fmt;
-use failure::_core::cmp::Ordering;
 use std::thread::sleep;
-use failure::_core::time::Duration;
-use futures::StreamExt;
 use std::net::TcpStream;
+use std::time::Duration;
 
 mod req;
 
@@ -96,7 +93,7 @@ pub async fn forward(
         in res.headers()
         .iter()
         .filter(|(h, _)| *h != "connection") {
-        client_resp.header(header_name.clone(), header_value.clone())
+        client_resp.header(header_name.clone(), header_value.clone());
     }
     Ok(client_resp.body(res.body().await?))
 }
@@ -182,6 +179,6 @@ pub async fn main() -> std::io::Result<()> {
     })
         .bind(("127.0.0.1", 3000))?
         .system_exit()
-        .start()
+        .run()
         .await
 }

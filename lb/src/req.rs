@@ -8,7 +8,7 @@ use url::ParseError as UrlParseError;
 use failure::{Backtrace, Context, Fail};
 use std::net::ToSocketAddrs;
 use actix_web::client::{Client, ClientRequest};
-use actix_web::{dev, http::Uri, web}
+use actix_web::{dev, web};
 use crate::req::ReqErrorKind::NotFoundSockAddr;
 
 #[derive(Debug, Fail)]
@@ -39,16 +39,6 @@ impl Fail for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.inner, f)
-    }
-}
-
-impl Error {
-    pub fn new(inner: Context<ReqErrorKind>) -> Error {
-        Error { inner }
-    }
-
-    pub fn kind(&self) -> &ReqErrorKind {
-        self.inner.get_context()
     }
 }
 
@@ -103,7 +93,7 @@ fn test_create_base_url() {
 pub fn create_forwarded_req(
     client: &web::Data<Client>,
     head: &dev::RequestHead,
-    new_url: &str
+    new_url: &str,
 ) -> ClientRequest {
     let forwarded_req = client.request_from(new_url, head).no_decompress();
     if let Some(addr) = head.peer_addr {
